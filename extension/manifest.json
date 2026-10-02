@@ -1,21 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Documentos de Licitação",
-  "version": "0.1.0",
-  "description": "Auxilia a emissão e o download de certidões para licitações sem servidor intermediário.",
+  "version": "0.5.0",
+  "description": "Central local para emitir e baixar certidões de licitantes nos portais oficiais.",
   "permissions": [
     "downloads",
     "storage",
     "tabs"
   ],
   "host_permissions": [
-    "https://brasilapi.com.br/*",
-    "https://certidoes-apf.apps.tcu.gov.br/*",
+    "https://certidoes.cgu.gov.br/*",
+    "https://cndt-certidao.tst.jus.br/*",
     "https://solucoes.receita.fazenda.gov.br/*",
-    "https://consulta-crf.caixa.gov.br/*",
-    "https://*.tst.jus.br/*",
-    "https://*.fazenda.mg.gov.br/*",
-    "https://samucaoo1.github.io/*"
+    "https://servicos.receitafederal.gov.br/*"
   ],
   "background": {
     "scripts": ["background.js"],
@@ -23,20 +20,23 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://samucaoo1.github.io/Documentos_licitacao/*"
-      ],
-      "js": ["content/site-bridge.js"],
-      "run_at": "document_start"
+      "matches": ["https://certidoes.cgu.gov.br/*"],
+      "js": ["content/common.js", "content/cgu.js"],
+      "run_at": "document_idle"
     },
     {
-      "matches": [
-        "https://solucoes.receita.fazenda.gov.br/*",
-        "https://consulta-crf.caixa.gov.br/*",
-        "https://*.tst.jus.br/*",
-        "https://*.fazenda.mg.gov.br/*"
-      ],
-      "js": ["content/portal-fill.js"],
+      "matches": ["https://cndt-certidao.tst.jus.br/*"],
+      "js": ["content/common.js", "content/cndt.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/*"],
+      "js": ["content/common.js", "content/cnpj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://servicos.receitafederal.gov.br/servico/certidoes/*"],
+      "js": ["content/common.js", "content/federal.js"],
       "run_at": "document_idle"
     }
   ],
