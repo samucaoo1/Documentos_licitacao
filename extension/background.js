@@ -136,14 +136,14 @@ async function openDocument(id, active = false) {
 }
 
 async function startWorkflow(cnpj, uf) {
-  const previous = await getState();
-  await closeWorkflowTabs(previous);
-
   const clean = cleanCnpj(cnpj);
 
   if (!/^\d{14}$/.test(clean)) {
     throw new Error("Informe um CNPJ numérico com 14 dígitos.");
   }
+
+  const previous = await getState();
+  await closeWorkflowTabs(previous);
 
   const state = {
     supplier: {
