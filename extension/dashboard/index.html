@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Documentos de Licitação</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="wrap brand">
+      <div class="mark">DL</div>
+      <div>
+        <h1>Documentos de Licitação</h1>
+        <p>Central local de emissão de certidões</p>
+      </div>
+      <span class="local">SEM SERVIDOR</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">LICITANTE</span>
+        <h2>Informe uma vez. Resolva só os CAPTCHAs necessários.</h2>
+        <p>
+          A extensão abre os portais oficiais, preenche o CNPJ e acompanha a emissão.
+          Quando houver confirmação humana, ela indica exatamente qual aba precisa de você.
+        </p>
+      </div>
+
+      <form id="supplierForm" class="panel form">
+        <label>
+          CNPJ
+          <input id="cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" required>
+        </label>
+
+        <label>
+          UF
+          <select id="uf">
+            <option value="MG">MG</option>
+            <option value="SP">SP</option>
+            <option value="RJ">RJ</option>
+            <option value="ES">ES</option>
+          </select>
+        </label>
+
+        <button class="primary" type="submit">Emitir documentação</button>
+      </form>
+    </section>
+
+    <section id="activeSupplier" class="panel supplier hidden">
+      <div>
+        <small>Processo atual</small>
+        <strong id="supplierCnpj">—</strong>
+      </div>
+      <div class="summary">
+        <span id="summaryText">Aguardando</span>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div>
+        <h3>Certidões</h3>
+        <p>Os portais continuam sendo os oficiais; a extensão só organiza o fluxo.</p>
+      </div>
+      <div class="toolbarActions">
+        <button id="downloadsButton">Abrir Downloads</button>
+        <button id="resetButton">Limpar</button>
+      </div>
+    </section>
+
+    <section id="documents" class="grid"></section>
+
+    <section class="note">
+      A extensão não resolve CAPTCHA automaticamente. Ela pode preencher formulários,
+      detectar que a confirmação foi concluída e continuar a emissão depois disso.
+    </section>
+  </main>
+
+  <template id="documentCard">
+    <article class="panel card">
+      <div class="cardTop">
+        <div class="icon"></div>
+        <div>
+          <h3 class="title"></h3>
+          <span class="source"></span>
+        </div>
+      </div>
+
+      <div class="statusRow">
+        <span class="statusBadge"></span>
+      </div>
+
+      <p class="message"></p>
+
+      <div class="cardActions">
+        <button class="focusButton">Abrir portal</button>
+        <button class="downloadButton hidden">Abrir arquivo</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
