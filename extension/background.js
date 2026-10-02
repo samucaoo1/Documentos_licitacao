@@ -61,6 +61,19 @@ async function setState(state) {
   return state;
 }
 
+async function closeWorkflowTabs(state = null) {
+  const current = state || (await getState());
+  const ids = Object.values(current.documents || {})
+    .map((doc) => doc.tabId)
+    .filter((id) => Number.isInteger(id));
+
+  for (const id of ids) {
+    try {
+      await api.tabs.remove(id);
+    } catch {}
+  }
+}
+
 async function patchDocument(id, patch) {
   const state = await getState();
   if (!state.documents[id]) return state;
@@ -71,11 +84,19 @@ async function patchDocument(id, patch) {
     updatedAt: Date.now()
   };
 
+  const statuses = Object.values(state.documents).map((doc) => doc.status);
+  if (statuses.length && statuses.every((status) => status === "downloaded")) {
+    state.running = false;
+  }
+
   await setState(state);
   return state;
 }
 
 async function resetWorkflow() {
+  const current = await getState();
+  await closeWorkflowTabs(current);
+
   return setState({
     supplier: null,
     running: false,
@@ -115,6 +136,9 @@ async function openDocument(id, active = false) {
 }
 
 async function startWorkflow(cnpj, uf) {
+  const previous = await getState();
+  await closeWorkflowTabs(previous);
+
   const clean = cleanCnpj(cnpj);
 
   if (!/^\d{14}$/.test(clean)) {
