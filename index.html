@@ -1,12 +1,117 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Central de documentos para licitações"><title>Central de Habilitação</title><link rel="stylesheet" href="styles.css"></head><body>
-<header><div class="wrap brand"><div class="logo">L</div><div><h1>Central de Habilitação</h1><p>Documentação para licitações</p></div><span class="beta">PRELIMINAR</span></div></header>
-<main class="wrap">
-<section class="hero"><div><span class="eyebrow">Consulta de fornecedor</span><h2>Documentação de habilitação em um só lugar.</h2><p>Consulta automaticamente as fontes públicas disponíveis e encaminha ao portal oficial quando houver CAPTCHA ou ação manual.</p></div>
-<form id="searchForm" class="panel"><label>CNPJ<input id="cnpj" maxlength="18" placeholder="00.000.000/0000-00" required></label><label>UF<select id="uf" required><option value="">Selecione</option><option>MG</option><option>SP</option><option>RJ</option><option>ES</option></select></label><button>Consultar documentação</button></form></section>
-<section id="company" class="panel company hidden"><div><small>Fornecedor</small><h3 id="companyName">—</h3><p id="companyMeta">—</p></div><span id="overall" class="badge neutral">Aguardando</span></section>
-<section class="toolbar"><div><h3>Documentos</h3><p>Situação consolidada das consultas.</p></div><button id="refresh" disabled>Atualizar</button></section>
-<section id="documents" class="grid"></section>
-<section class="note"><strong>Importante:</strong> consultas com CAPTCHA não são automatizadas. O sistema leva ao portal oficial para conclusão pelo usuário.</section>
-</main>
-<template id="card"><article class="panel card"><div class="head"><div class="icon"></div><div><h4></h4><small class="source"></small></div></div><div class="status"><span class="badge"></span><span class="validity">—</span></div><p class="message"></p><details class="details hidden"><summary>Ver detalhes</summary><div class="detailsBody"></div></details><button class="action">Abrir</button></article></template>
-<script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Central para consulta e download de documentos de habilitação em licitações">
+  <title>Central de Habilitação</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="wrap brand">
+      <div class="logo">L</div>
+      <div>
+        <h1>Central de Habilitação</h1>
+        <p>Documentação para licitações</p>
+      </div>
+      <span class="beta">PRELIMINAR</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">Consulta de fornecedor</span>
+        <h2>Baixe a documentação de habilitação em um só lugar.</h2>
+        <p>
+          O sistema baixa automaticamente os documentos que possuem integração
+          pública e identifica quando o órgão exige CAPTCHA, credencial ou ação humana.
+        </p>
+      </div>
+
+      <form id="searchForm" class="panel">
+        <label>
+          CNPJ
+          <input id="cnpj" maxlength="18" placeholder="00.000.000/0000-00" required>
+        </label>
+
+        <label>
+          UF
+          <select id="uf" required>
+            <option value="">Selecione</option>
+            <option>MG</option>
+            <option>SP</option>
+            <option>RJ</option>
+            <option>ES</option>
+          </select>
+        </label>
+
+        <button type="submit">Consultar documentação</button>
+      </form>
+    </section>
+
+    <section id="environmentNotice" class="environment hidden"></section>
+
+    <section id="company" class="panel company hidden">
+      <div>
+        <small>Fornecedor</small>
+        <h3 id="companyName">—</h3>
+        <p id="companyMeta">—</p>
+      </div>
+      <span id="overall" class="badge neutral">Aguardando</span>
+    </section>
+
+    <section class="toolbar">
+      <div>
+        <h3>Documentos</h3>
+        <p>Automáticos quando possível; intervenção humana apenas quando exigida pelo órgão.</p>
+      </div>
+      <div class="toolbarActions">
+        <button id="downloadAvailable" disabled>Baixar automáticos</button>
+        <button id="refresh" disabled>Atualizar</button>
+      </div>
+    </section>
+
+    <section id="documents" class="grid"></section>
+
+    <section class="note">
+      <strong>Importante:</strong>
+      o sistema não tenta contornar CAPTCHA ou controles anti-automação.
+      Quando o órgão exigir confirmação humana, isso será indicado claramente.
+    </section>
+  </main>
+
+  <template id="card">
+    <article class="panel card">
+      <div class="head">
+        <div class="icon"></div>
+        <div>
+          <h4></h4>
+          <small class="source"></small>
+        </div>
+      </div>
+
+      <div class="modeRow">
+        <span class="mode"></span>
+      </div>
+
+      <div class="status">
+        <span class="badge"></span>
+        <span class="validity">—</span>
+      </div>
+
+      <p class="message"></p>
+
+      <details class="details hidden">
+        <summary>Ver detalhes</summary>
+        <div class="detailsBody"></div>
+      </details>
+
+      <button class="action">Abrir</button>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
