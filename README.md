@@ -19,9 +19,11 @@ O projeto não tenta contornar CAPTCHA ou outros mecanismos anti-automação.
 
 ### Automático
 
-- consulta cadastral de CNPJ por dados públicos;
+- consulta cadastral de CNPJ por dados públicos, incluindo CNAE principal e CNAEs secundários;
 - Consulta Consolidada de Pessoa Jurídica do TCU;
-- geração e download do PDF consolidado do TCU pelo backend.
+- geração e download do PDF consolidado do TCU pelo backend;
+- botão individual de download para certidões automatizadas;
+- botão explícito de emissão/download no portal para documentos que exigem interação.
 
 ### Assistido
 
