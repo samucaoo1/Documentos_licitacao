@@ -75,19 +75,6 @@
       return;
     }
 
-    if (
-      A.bodyHas(
-        "certidão negativa de débitos trabalhistas",
-        "certidão emitida",
-        "baixar certidão"
-      )
-    ) {
-      if (A.clickText(["baixar", "certidão", "download"])) {
-        await A.status(kind, "result_ready", "CNDT emitida; abrindo arquivo.");
-      }
-      return;
-    }
-
     const captcha = captchaInput();
 
     if (
@@ -105,6 +92,15 @@
       if (submitted) {
         await A.status(kind, "working", "Emitindo CNDT…");
       }
+      return;
+    }
+
+    if (submitted && A.bodyHas("aguarde a emissão", "certidão emitida")) {
+      await A.status(
+        kind,
+        "working",
+        "Aguardando o documento gerado pelo TST."
+      );
     }
   }
 
