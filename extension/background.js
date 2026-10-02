@@ -344,12 +344,7 @@ function inferKindFromDownload(item) {
   if (text.includes("certidoes.cgu.gov.br")) return "cgu";
   if (text.includes("cndt-certidao.tst.jus.br")) return "cndt";
   if (text.includes("cnpjreva")) return "cnpj";
-  if (
-    text.includes("servicos.receitafederal.gov.br") ||
-    text.includes("certidao")
-  ) {
-    return "federal";
-  }
+  if (text.includes("servicos.receitafederal.gov.br")) return "federal";
 
   return null;
 }
