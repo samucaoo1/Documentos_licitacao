@@ -2,39 +2,9 @@
   const A = globalThis.LicitacaoAdapter;
   const kind = "cndt";
   let supplier = null;
-  let submitted = false;
   let downloaded = false;
 
-  async function prepare() {
-    supplier = await A.init(kind);
-    if (!supplier) return;
-
-    const input = A.findInput([
-      'input[name*="cpfCnpj" i]',
-      'input[id*="cpfCnpj" i]',
-      'input[name*="cnpj" i]',
-      'input[id*="cnpj" i]'
-    ]);
-
-    if (input && !input.value) {
-      A.setInput(input, supplier.cnpj);
-    }
-
-    A.banner(
-      "CNDT: CNPJ preenchido. Digite o CAPTCHA; a extensão acompanhará a emissão.",
-      "warning"
-    );
-
-    await A.status(
-      kind,
-      "needs_human",
-      "Digite os caracteres do CAPTCHA da CNDT."
-    );
-
-    A.watch(scan);
-  }
-
-  function captchaInput() {
+  function findCaptchaInput() {
     const inputs = [
       ...document.querySelectorAll("input:not([type=hidden])")
     ];
@@ -61,10 +31,40 @@
     );
   }
 
+  async function prepare() {
+    supplier = await A.init(kind);
+    if (!supplier) return;
+
+    const input = A.findInput([
+      'input[name*="cpfCnpj" i]',
+      'input[id*="cpfCnpj" i]',
+      'input[name*="cnpj" i]',
+      'input[id*="cnpj" i]'
+    ]);
+
+    if (input && !input.value) {
+      A.setInput(input, supplier.cnpj);
+    }
+
+    A.banner(
+      "CNDT: CNPJ preenchido. Digite o CAPTCHA e clique em Emitir Certidão.",
+      "warning"
+    );
+
+    await A.status(
+      kind,
+      "needs_human",
+      "Digite o CAPTCHA e clique no botão oficial Emitir Certidão."
+    );
+
+    A.watch(scan);
+  }
+
   async function scan() {
     if (!supplier || downloaded) return;
 
     const pdf = A.findPdfLink();
+
     if (pdf) {
       downloaded = true;
       await A.download(
@@ -75,36 +75,38 @@
       return;
     }
 
-    const captcha = captchaInput();
-
-    const captchaLength = captcha?.value?.trim().length || 0;
-    const expectedLength =
-      captcha?.maxLength && captcha.maxLength > 0 && captcha.maxLength < 10
-        ? captcha.maxLength
-        : 4;
-
     if (
-      captcha &&
-      captchaLength >= expectedLength &&
-      !submitted
+      A.bodyHas(
+        "certidão emitida",
+        "certidão negativa de débitos trabalhistas"
+      ) &&
+      !findCaptchaInput()
     ) {
-      submitted = A.clickText([
-        "emitir certidão",
-        "emitir",
-        "consultar"
-      ]);
-
-      if (submitted) {
-        await A.status(kind, "working", "Emitindo CNDT…");
-      }
+      A.banner(
+        "CNDT: resultado pronto. Use o botão oficial de download caso o arquivo ainda não tenha iniciado.",
+        "success"
+      );
+      await A.status(
+        kind,
+        "result_ready",
+        "CNDT pronta; aguardando o download oficial."
+      );
       return;
     }
 
-    if (submitted && A.bodyHas("aguarde a emissão", "certidão emitida")) {
+    const captcha = findCaptchaInput();
+
+    if (captcha) {
+      await A.status(
+        kind,
+        "needs_human",
+        "Digite o CAPTCHA e clique em Emitir Certidão."
+      );
+    } else {
       await A.status(
         kind,
         "working",
-        "Aguardando o documento gerado pelo TST."
+        "Aguardando a resposta do TST."
       );
     }
   }
