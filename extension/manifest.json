@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Documentos de Licitação",
+  "version": "0.1.0",
+  "description": "Auxilia a emissão e o download de certidões para licitações sem servidor intermediário.",
+  "permissions": [
+    "downloads",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://brasilapi.com.br/*",
+    "https://certidoes-apf.apps.tcu.gov.br/*",
+    "https://solucoes.receita.fazenda.gov.br/*",
+    "https://consulta-crf.caixa.gov.br/*",
+    "https://*.tst.jus.br/*",
+    "https://*.fazenda.mg.gov.br/*",
+    "https://samucaoo1.github.io/*"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://samucaoo1.github.io/Documentos_licitacao/*"
+      ],
+      "js": ["content/site-bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://solucoes.receita.fazenda.gov.br/*",
+        "https://consulta-crf.caixa.gov.br/*",
+        "https://*.tst.jus.br/*",
+        "https://*.fazenda.mg.gov.br/*"
+      ],
+      "js": ["content/portal-fill.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Documentos de Licitação",
+    "default_popup": "popup.html"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "documentos-licitacao@samucaoo1.github.io",
+      "strict_min_version": "121.0"
+    }
+  }
+}
