@@ -87,7 +87,7 @@ class Provider:
   );
 
   const pdf = [...document.querySelectorAll('a[href]')].find(a =>
-    /\.pdf(?:$|[?#])/i.test(a.href || '') ||
+    /\\.pdf(?:$|[?#])/i.test(a.href || '') ||
     (a.innerText || '').toLowerCase().includes('baixar pdf')
   );
 
