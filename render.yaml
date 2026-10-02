@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: documentos-licitacao
+    env: node
+    plan: free
+    buildCommand: ""
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
