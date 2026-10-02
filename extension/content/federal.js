@@ -2,14 +2,18 @@
   const A = globalThis.LicitacaoAdapter;
   const kind = "federal";
   let supplier = null;
-  let submitted = false;
   let downloaded = false;
 
   async function prepare() {
     supplier = await A.init(kind);
     if (!supplier) return;
 
-    await A.status(kind, "working", "Preparando certidão federal.");
+    await A.status(
+      kind,
+      "working",
+      "Preparando a certidão federal."
+    );
+
     A.watch(scan);
   }
 
@@ -38,50 +42,46 @@
       A.setInput(input, supplier.cnpj);
     }
 
-    if (
-      A.bodyHas(
-        "certidão negativa de débitos",
-        "certidão positiva com efeitos de negativa",
-        "segunda via",
-        "certidão emitida"
-      )
-    ) {
-      if (A.clickText(["baixar", "2ª via", "segunda via", "emitir"])) {
-        await A.status(
-          kind,
-          "result_ready",
-          "Certidão federal localizada; abrindo documento."
-        );
-      }
-      return;
-    }
-
     const captcha = A.captcha();
 
     if (captcha.present && !captcha.solved) {
       A.banner(
-        "Certidão Federal: resolva a confirmação humana para continuar.",
+        "Certidão Federal: resolva a confirmação humana e clique em Emitir/Consultar.",
         "warning"
       );
       await A.status(
         kind,
         "needs_human",
-        "Resolva a confirmação humana da Receita/PGFN."
+        "Resolva a confirmação humana e clique no botão oficial."
       );
       return;
     }
 
-    if (input?.value && !submitted && (!captcha.present || captcha.solved)) {
-      submitted = A.clickText([
-        "emitir certidão",
-        "emitir",
-        "consultar"
-      ]);
-
-      if (submitted) {
-        await A.status(kind, "working", "Emitindo certidão federal…");
-      }
+    if (
+      A.bodyHas(
+        "certidão negativa de débitos",
+        "certidão positiva com efeitos de negativa",
+        "certidão emitida",
+        "segunda via"
+      )
+    ) {
+      A.banner(
+        "Certidão Federal: resultado encontrado. Use o botão oficial de emissão/download.",
+        "success"
+      );
+      await A.status(
+        kind,
+        "result_ready",
+        "Resultado pronto; use o botão oficial de emissão/download."
+      );
+      return;
     }
+
+    await A.status(
+      kind,
+      "working",
+      "CNPJ preparado; aguardando sua ação no portal."
+    );
   }
 
   prepare();
