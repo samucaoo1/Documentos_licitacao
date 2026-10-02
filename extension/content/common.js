@@ -227,30 +227,39 @@ globalThis.LicitacaoAdapter = {
     return box;
   },
 
-  watch(callback, interval = 900) {
+  watch(callback, interval = 2200) {
     let stopped = false;
+    let running = false;
 
     const run = async () => {
-      if (stopped) return;
+      if (stopped || running || document.hidden) return;
+
+      running = true;
       try {
         await callback();
-      } catch {}
+      } catch {
+        // O monitor nunca deve derrubar ou bloquear a página do órgão.
+      } finally {
+        running = false;
+      }
     };
-
-    const observer = new MutationObserver(run);
-    observer.observe(document.documentElement, {
-      subtree: true,
-      childList: true,
-      attributes: true
-    });
 
     const timer = setInterval(run, interval);
-    run();
-
-    return () => {
-      stopped = true;
-      observer.disconnect();
-      clearInterval(timer);
+    const onVisible = () => {
+      if (!document.hidden) run();
     };
+
+    document.addEventListener("visibilitychange", onVisible);
+    setTimeout(run, 300);
+
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+
+    window.addEventListener("pagehide", stop, { once: true });
+    return stop;
   }
 };
