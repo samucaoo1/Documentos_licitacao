@@ -1,153 +1,70 @@
 # Documentos de Licitação
 
-Extensão de navegador para facilitar a emissão e o download de documentos de habilitação de licitantes.
+Ferramenta para facilitar a emissão e o download de documentos de habilitação
+de licitantes.
 
-## Objetivo
+## Nova implementação desktop
 
-Informar o CNPJ uma única vez e deixar a extensão cuidar da navegação repetitiva nos portais oficiais.
+A branch \`desktop-pyside6\` inicia a migração para um aplicativo desktop em
+Python + PySide6 + Qt WebEngine.
 
-Fluxo:
+Objetivo do fluxo:
 
-```text
-CNPJ + UF
-   │
-   ├── CGU
-   ├── CNDT / TST
-   ├── Comprovante CNPJ / Receita
-   └── CND Federal / RFB-PGFN
-        │
-        ├── sem CAPTCHA → extensão continua
-        └── com CAPTCHA → você resolve e a extensão retoma
-```
+    CNPJ + UF
+       |
+       v
+    navegador embutido
+       |
+       +-- CGU
+       +-- CNDT
+       +-- Comprovante CNPJ
+       +-- CND Federal
+       |
+       v
+    Downloads/Licitacoes/<CNPJ>/
 
-Não há servidor intermediário. Os portais são acessados diretamente pelo navegador do usuário.
+O processamento é sequencial, um portal por vez. O aplicativo preenche o CNPJ,
+detecta quando existe CAPTCHA e deixa a intervenção humana acontecer no próprio
+navegador incorporado. Depois acompanha o resultado e intercepta o download.
 
-## Estado atual — 0.5.0
+A extensão WebExtension existente continua no repositório durante a transição,
+mas não é a arquitetura alvo desta branch.
 
-O painel local da extensão:
+## Executar o MVP
 
-- abre os quatro portais oficiais;
-- mantém um checklist por certidão;
-- preenche o CNPJ quando identifica o campo;
-- identifica CAPTCHA ou confirmação humana;
-- continua a acompanhar a página depois da intervenção;
-- baixa PDFs quando encontra um endereço de arquivo;
-- acompanha downloads iniciados pelo próprio portal;
-- no Firefox, pode salvar páginas de comprovante como PDF usando a API do navegador.
+Veja [desktop/README.md](desktop/README.md).
 
-### Portais iniciais
+Resumo no Linux:
 
-- CGU — Certidão Negativa Correcional;
-- TST — CNDT;
-- Receita Federal — Comprovante de Inscrição e Situação Cadastral no CNPJ;
-- Receita Federal / PGFN — Certidão de Regularidade Fiscal Federal.
+    cd desktop
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    PYTHONPATH=src python -m documentos_licitacao
 
-## Instalação temporária no Firefox
+No Windows PowerShell:
 
-Clone ou baixe este repositório.
+    cd desktop
+    py -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    pip install -r requirements.txt
+    $env:PYTHONPATH="src"
+    python -m documentos_licitacao
 
-Abra:
+## Compilação
 
-```text
-about:debugging#/runtime/this-firefox
-```
+O projeto usa Nuitka em modo standalone na primeira fase. Scripts de build estão
+em:
 
-Clique em **Carregar extensão temporária** e selecione:
+- \`desktop/build_windows.ps1\`
+- \`desktop/build_linux.sh\`
 
-```text
-extension/manifest.json
-```
+O modo onefile fica para depois da validação do Qt WebEngine e dos quatro
+portais reais.
 
-Depois clique no ícone **Documentos de Licitação** e em **Abrir painel**.
+## Segurança
 
-## Chrome / Chromium
+CAPTCHA não é resolvido nem contornado pelo aplicativo.
 
-Abra:
-
-```text
-chrome://extensions
-```
-
-Ative **Modo do desenvolvedor** → **Carregar sem compactação** → escolha a pasta:
-
-```text
-extension/
-```
-
-O manifesto usa a configuração Manifest V3 compatível com Firefox e Chromium modernos.
-
-## Uso
-
-1. Abra o painel da extensão.
-2. Informe CNPJ e UF.
-3. Clique em **Emitir documentação**.
-4. As abas dos órgãos são abertas em segundo plano.
-5. O painel informa quais documentos estão sendo processados.
-6. Quando aparecer **Precisa de você**, clique em **Resolver agora**.
-7. Resolva apenas o CAPTCHA/validação do órgão.
-8. A extensão continua acompanhando a emissão e registra o download.
-
-Downloads controlados diretamente pela extensão são organizados, quando possível, em:
-
-```text
-Downloads/
-└── Licitacoes/
-    └── <CNPJ>/
-        ├── 01-CGU-Correcional-<CNPJ>.pdf
-        ├── 02-CNDT-<CNPJ>.pdf
-        ├── 03-CNPJ-<CNPJ>.pdf
-        └── 04-CND-Federal-<CNPJ>.pdf
-```
-
-Downloads disparados internamente pelo portal podem manter o nome definido pelo próprio órgão.
-
-## Segurança e limites
-
-A extensão **não resolve nem contorna CAPTCHA**.
-
-Ela somente:
-
-- preenche dados repetitivos;
-- seleciona opções conhecidas;
-- percebe quando a confirmação humana é necessária;
-- retoma depois da confirmação;
-- localiza e baixa documentos quando o portal os disponibiliza.
-
-Nenhuma senha gov.br, certificado digital ou credencial é armazenada.
-
-## Estrutura
-
-```text
-extension/
-├── manifest.json
-├── background.js
-├── popup.html
-├── popup.js
-├── popup.css
-├── dashboard/
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
-└── content/
-    ├── common.js
-    ├── cgu.js
-    ├── cndt.js
-    ├── cnpj.js
-    └── federal.js
-```
-
-Cada portal possui um adaptador separado para facilitar manutenção quando o órgão alterar sua página.
-
-## Próximos adaptadores
-
-- CRF / FGTS — CAIXA;
-- certidão estadual, começando por Minas Gerais;
-- outros documentos exigidos conforme o edital.
-
-## Desenvolvimento
-
-Requer Node.js 20+ somente para os testes do repositório. A extensão em si não precisa de Node.js para funcionar.
-
-```bash
-npm test
-```
+A automação é limitada a tarefas repetitivas e previsíveis, como preencher CNPJ,
+acompanhar a página, organizar downloads e exportar o comprovante em PDF.
