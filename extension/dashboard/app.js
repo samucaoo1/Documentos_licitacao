@@ -35,6 +35,7 @@ function formatCnpj(value = "") {
 
 function statusLabel(status) {
   return {
+    queued: "Na fila",
     idle: "Aguardando",
     opening: "Abrindo portal",
     working: "Automatizando",
@@ -89,9 +90,11 @@ async function render() {
     focus.textContent =
       doc.status === "needs_human"
         ? "Resolver agora"
-        : doc.status === "downloaded"
-          ? "Abrir portal"
-          : "Abrir portal";
+        : doc.status === "queued"
+          ? "Iniciar agora"
+          : doc.status === "result_ready"
+            ? "Abrir documento"
+            : "Abrir portal";
 
     if (doc.status === "needs_human") {
       focus.classList.add("attention");
@@ -104,8 +107,25 @@ async function render() {
       });
     });
 
-    if (doc.downloadId) {
+    if (doc.id === "cnpj" && doc.status === "result_ready") {
       openDownload.classList.remove("hidden");
+      openDownload.textContent = "Salvar PDF";
+      openDownload.addEventListener("click", async () => {
+        const response = await api.runtime.sendMessage({
+          type: "SAVE_DOCUMENT_PDF",
+          kind: "cnpj"
+        });
+
+        if (!response?.ok) {
+          alert(
+            response?.error ||
+              "Este navegador não oferece salvamento direto. Use Imprimir > Salvar como PDF."
+          );
+        }
+      });
+    } else if (doc.downloadId) {
+      openDownload.classList.remove("hidden");
+      openDownload.textContent = "Abrir arquivo";
       openDownload.addEventListener("click", async () => {
         try {
           await api.downloads.open(doc.downloadId);
@@ -135,7 +155,7 @@ form.addEventListener("submit", async (event) => {
 
   const button = form.querySelector("button[type=submit]");
   button.disabled = true;
-  button.textContent = "Abrindo portais…";
+  button.textContent = "Abrindo CGU…";
 
   try {
     const response = await api.runtime.sendMessage({
