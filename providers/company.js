@@ -9,7 +9,7 @@ export async function fetchCompany(cnpj, { timeoutMs = 12000 } = {}) {
         signal: controller.signal,
         headers: {
           accept: "application/json",
-          "user-agent": "DocumentosLicitacao/0.3"
+          "user-agent": "DocumentosLicitacao/0.4"
         }
       }
     );
@@ -27,12 +27,24 @@ export async function fetchCompany(cnpj, { timeoutMs = 12000 } = {}) {
       throw new Error(data?.message || "Falha HTTP " + response.status);
     }
 
+    const secondary = Array.isArray(data.cnaes_secundarios)
+      ? data.cnaes_secundarios.map((item) => ({
+          codigo: String(item?.codigo ?? item?.code ?? ""),
+          descricao: item?.descricao || item?.description || ""
+        }))
+      : [];
+
     return {
       razaoSocial: data.razao_social || null,
       nomeFantasia: data.nome_fantasia || null,
       municipio: data.municipio || null,
       uf: data.uf || null,
-      situacao: data.descricao_situacao_cadastral || null
+      situacao: data.descricao_situacao_cadastral || null,
+      cnaePrincipal: {
+        codigo: String(data.cnae_fiscal || ""),
+        descricao: data.cnae_fiscal_descricao || ""
+      },
+      cnaesSecundarios: secondary
     };
   } finally {
     clearTimeout(timer);
