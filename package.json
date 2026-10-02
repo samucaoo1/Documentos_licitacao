@@ -1,13 +1,11 @@
 {
-  "name": "central-habilitacao-licitacoes",
-  "version": "0.4.0",
+  "name": "documentos-licitacao-extension",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
-  "description": "Central web para consulta e organização de documentos de habilitação em licitações.",
+  "description": "Extensão local para emissão assistida de certidões de licitantes.",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "test": "node --check app.js && node --check server.js && node --check providers/company.js && node --check providers/tcu.js && node --check providers/documents.js && node --check extension/background.js && node --check extension/content/site-bridge.js && node --check extension/content/portal-fill.js && node --test"
+    "test": "node --check extension/background.js && node --check extension/popup.js && node --check extension/dashboard/app.js && node --check extension/content/common.js && node --check extension/content/cgu.js && node --check extension/content/cndt.js && node --check extension/content/cnpj.js && node --check extension/content/federal.js && node --test extension.test.js"
   },
   "engines": {
     "node": ">=20"
