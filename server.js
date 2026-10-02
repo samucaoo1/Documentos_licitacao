@@ -69,7 +69,7 @@ async function consultation(cnpj,uf){
 }
 async function pdfResponse(cnpj,res){
   const data=await tcu(cnpj,true);
-  const b64=data?.pdfBase64||data?.pdf||data?.arquivo;
+  const b64=data?.certidaoPDF||data?.pdfBase64||data?.pdf||data?.arquivo;
   if(typeof b64!=="string")throw new Error("O TCU não retornou PDF neste formato.");
   const buf=Buffer.from(b64.replace(/^data:application\/pdf;base64,/,""),"base64");
   res.writeHead(200,{"content-type":"application/pdf","content-disposition":'attachment; filename="consulta-tcu-'+cnpj+'.pdf"'});res.end(buf);
