@@ -77,10 +77,15 @@
 
     const captcha = captchaInput();
 
+    const captchaLength = captcha?.value?.trim().length || 0;
+    const expectedLength =
+      captcha?.maxLength && captcha.maxLength > 0 && captcha.maxLength < 10
+        ? captcha.maxLength
+        : 4;
+
     if (
       captcha &&
-      captcha.value &&
-      captcha.value.trim().length >= 3 &&
+      captchaLength >= expectedLength &&
       !submitted
     ) {
       submitted = A.clickText([
