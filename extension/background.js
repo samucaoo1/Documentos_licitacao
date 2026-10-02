@@ -19,7 +19,7 @@ function cleanCnpj(value = "") {
   return String(value).toUpperCase().replace(/[^0-9A-Z]/g, "");
 }
 
-async function downloadTcu(cnpj) {
+async function fetchTcu(cnpj, pdf = false) {
   const clean = cleanCnpj(cnpj);
 
   if (!/^\d{14}$/.test(clean)) {
@@ -29,7 +29,8 @@ async function downloadTcu(cnpj) {
   const url =
     "https://certidoes-apf.apps.tcu.gov.br/api/rest/publico/certidoes/" +
     encodeURIComponent(clean) +
-    "?seEmitirPDF=true";
+    "?seEmitirPDF=" +
+    String(Boolean(pdf));
 
   const response = await fetch(url, {
     headers: {
@@ -49,6 +50,18 @@ async function downloadTcu(cnpj) {
   if (!response.ok) {
     throw new Error(data?.message || "TCU: HTTP " + response.status);
   }
+
+  return data;
+}
+
+async function downloadTcu(cnpj) {
+  const clean = cleanCnpj(cnpj);
+
+  if (!/^\d{14}$/.test(clean)) {
+    throw new Error("A API pública do TCU aceita CNPJ numérico neste fluxo.");
+  }
+
+  const data = await fetchTcu(clean, true);
 
   const base64 =
     data?.certidaoPDF ||
@@ -110,6 +123,13 @@ async function handle(message) {
       ok: true,
       extension: true,
       version: api.runtime.getManifest().version
+    };
+  }
+
+  if (message.type === "QUERY_TCU") {
+    return {
+      ok: true,
+      data: await fetchTcu(message.cnpj, false)
     };
   }
 
