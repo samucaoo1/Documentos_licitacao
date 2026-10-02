@@ -51,12 +51,8 @@
     }
 
     if (
-      A.bodyHas(
-        "certidão negativa emitida",
-        "resultado da consulta",
-        "certidão negativa correcional"
-      ) &&
-      A.clickText(["certidão", "baixar", "imprimir"])
+      A.bodyHas("resultado da consulta", "certidão negativa emitida") &&
+      A.clickText(["baixar", "imprimir", "certidão"])
     ) {
       await A.status(
         kind,
