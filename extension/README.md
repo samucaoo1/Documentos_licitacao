@@ -1,40 +1,64 @@
-# Extensão WebExtension
+# Extensão — Documentos de Licitação
 
-Extensão complementar da Central de Habilitação.
+Esta pasta contém a aplicação principal.
 
-## Objetivo
+## Fluxo
 
-Permitir que o GitHub Pages faça operações que um site comum não pode fazer por restrições de CORS e de segurança entre domínios, sem usar um servidor intermediário.
+O painel recebe CNPJ e UF e inicia quatro adaptadores:
 
-## Estado atual
+| Adaptador | Portal |
+| --- | --- |
+| `cgu.js` | Certidão Negativa Correcional da CGU |
+| `cndt.js` | CNDT do TST |
+| `cnpj.js` | Comprovante de Inscrição e Situação Cadastral |
+| `federal.js` | Certidão de Regularidade Fiscal RFB/PGFN |
 
-- ponte segura entre o GitHub Pages e a extensão;
-- download direto do PDF consolidado do TCU;
-- abertura dos portais oficiais;
-- armazenamento temporário local do CNPJ;
-- tentativa conservadora de preenchimento do campo CNPJ nos portais;
-- nenhuma tentativa de resolver ou contornar CAPTCHA.
+Cada adaptador tenta somente ações repetitivas e previsíveis, como localizar o campo de CNPJ, preencher o valor, selecionar o tipo de certidão e identificar o documento final.
+
+Quando há CAPTCHA, o estado muda para **Precisa de você**. O usuário resolve a confirmação no portal oficial e o adaptador continua observando a página.
+
+## Arquivos
+
+```text
+extension/
+├── manifest.json
+├── background.js
+├── popup.html
+├── popup.js
+├── popup.css
+├── dashboard/
+│   ├── index.html
+│   ├── app.js
+│   └── styles.css
+└── content/
+    ├── common.js
+    ├── cgu.js
+    ├── cndt.js
+    ├── cnpj.js
+    └── federal.js
+```
 
 ## Firefox
 
-Abra:
-
 ```text
 about:debugging#/runtime/this-firefox
+→ Carregar extensão temporária
+→ selecionar manifest.json
 ```
 
-Escolha **Carregar extensão temporária** e selecione `extension/manifest.json`.
+O Firefox possui `tabs.saveAsPDF()`, então o adaptador do comprovante CNPJ pode abrir o salvamento em PDF depois da emissão.
 
-## Chrome / Chromium
-
-Abra:
+## Chromium
 
 ```text
 chrome://extensions
+→ Modo do desenvolvedor
+→ Carregar sem compactação
+→ selecionar a pasta extension/
 ```
 
-Ative **Modo do desenvolvedor**, clique em **Carregar sem compactação** e selecione a pasta `extension/`.
+Quando o navegador não oferece salvamento direto de página como PDF, a extensão pede o uso de **Imprimir → Salvar como PDF** apenas naquele documento.
 
-## Observação
+## Regra de segurança
 
-A automação de cada portal será refinada com seletores específicos. A extensão apenas preenche campos quando encontra um input claramente identificado como CNPJ; ela não envia formulários automaticamente e não contorna CAPTCHA.
+CAPTCHA nunca é resolvido ou contornado pela extensão. O código somente detecta a etapa, aguarda o usuário concluí-la e retoma o fluxo depois.
