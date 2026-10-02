@@ -1,0 +1,15 @@
+{
+  "name": "central-habilitacao-licitacoes",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Central web para consulta e organização de documentos de habilitação em licitações.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
