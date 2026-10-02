@@ -53,6 +53,28 @@
   async function scan() {
     if (!supplier || downloaded) return;
 
+    A.selectText(["ente privado", "entes privados"]) ||
+      A.clickText(["ente privado", "entes privados"]);
+
+    A.selectText([
+      "certidão negativa correcional",
+      "negativa correcional"
+    ]) ||
+      A.clickText([
+        "certidão negativa correcional",
+        "negativa correcional"
+      ]);
+
+    const input = A.findInput([
+      'input[name*="cnpj" i]',
+      'input[id*="cnpj" i]',
+      'input[placeholder*="cnpj" i]'
+    ]);
+
+    if (input && !input.value) {
+      A.setInput(input, A.formatCnpj(supplier.cnpj));
+    }
+
     const pdf = A.findPdfLink();
 
     if (pdf) {
