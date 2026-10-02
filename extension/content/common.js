@@ -1,4 +1,5 @@
 const api = globalThis.browser ?? globalThis.chrome;
+const statusCache = new Map();
 
 globalThis.LicitacaoAdapter = {
   async init(kind) {
@@ -12,6 +13,14 @@ globalThis.LicitacaoAdapter = {
   },
 
   async status(kind, status, message) {
+    const key = status + "\n" + String(message || "");
+
+    if (statusCache.get(kind) === key) {
+      return { ok: true, unchanged: true };
+    }
+
+    statusCache.set(kind, key);
+
     return api.runtime.sendMessage({
       type: "ADAPTER_STATUS",
       kind,
@@ -200,9 +209,15 @@ globalThis.LicitacaoAdapter = {
 
   banner(message, tone = "info") {
     const old = document.getElementById("__licitacao_helper");
+
+    if (old && old.textContent === message && old.dataset.tone === tone) {
+      return old;
+    }
+
     if (old) old.remove();
 
     const box = document.createElement("div");
+    box.dataset.tone = tone;
     box.id = "__licitacao_helper";
     box.textContent = message;
 
