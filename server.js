@@ -315,7 +315,7 @@ async function handler(request, response) {
         JSON.stringify({
           ok: true,
           service: "documentos-licitacao",
-          version: "0.3.0"
+          version: "0.4.0"
         })
       );
       return;
