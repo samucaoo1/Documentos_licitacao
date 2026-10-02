@@ -14,7 +14,13 @@ const downloadAvailable = $("#downloadAvailable");
 const environmentNotice = $("#environmentNotice");
 
 const IS_GITHUB_PAGES = location.hostname.endsWith(".github.io");
+const API_BASE_URL = String(window.APP_CONFIG?.API_BASE_URL || "").replace(/\/$/, "");
+const USE_BACKEND = !IS_GITHUB_PAGES || Boolean(API_BASE_URL);
 let lastResult = null;
+
+function backendUrl(path) {
+  return API_BASE_URL + path;
+}
 
 const OFFICIAL = {
   cnpj:
@@ -30,10 +36,10 @@ const OFFICIAL = {
 
 if (IS_GITHUB_PAGES) {
   environmentNotice.classList.remove("hidden");
-  environmentNotice.innerHTML =
-    "<strong>Modo GitHub Pages:</strong> " +
-    "esta hospedagem é estática. Downloads que dependem de backend ficam limitados; " +
-    "o TCU é tentado diretamente no navegador quando a API permitir.";
+
+  environmentNotice.innerHTML = API_BASE_URL
+    ? "<strong>GitHub Pages + backend:</strong> interface estática conectada ao servidor de emissão automática."
+    : "<strong>Modo GitHub Pages:</strong> esta hospedagem é estática. Configure <code>API_BASE_URL</code> em <code>config.js</code> para habilitar o backend e os downloads automáticos.";
 }
 
 const clean = (value) =>
@@ -212,7 +218,9 @@ function renderDocuments(data) {
       action.textContent = "Baixar PDF";
       action.classList.add("primaryAction");
       action.onclick = () => {
-        location.href = doc.downloadUrl;
+        location.href = doc.downloadUrl.startsWith("/")
+          ? backendUrl(doc.downloadUrl)
+          : doc.downloadUrl;
       };
     } else if (doc.officialUrl) {
       action.textContent =
@@ -487,7 +495,7 @@ async function consultOnGithubPages(cnpj, uf) {
 
 async function consultOnBackend(cnpj, uf) {
   const data = await fetchJson(
-    "/api/consulta?cnpj=" +
+    backendUrl("/api/consulta?cnpj=") +
       encodeURIComponent(cnpj) +
       "&uf=" +
       encodeURIComponent(uf)
@@ -579,9 +587,9 @@ async function consult() {
   downloadAvailable.disabled = true;
 
   try {
-    const data = IS_GITHUB_PAGES
-      ? await consultOnGithubPages(cnpj, uf)
-      : await consultOnBackend(cnpj, uf);
+    const data = USE_BACKEND
+      ? await consultOnBackend(cnpj, uf)
+      : await consultOnGithubPages(cnpj, uf);
 
     lastResult = data;
     renderHeader(data);
@@ -610,7 +618,9 @@ downloadAvailable.addEventListener("click", async () => {
       await downloadTcuOnBrowser(lastResult.cnpj, button);
     } else if (doc.downloadUrl) {
       const anchor = window.document.createElement("a");
-      anchor.href = doc.downloadUrl;
+      anchor.href = doc.downloadUrl.startsWith("/")
+        ? backendUrl(doc.downloadUrl)
+        : doc.downloadUrl;
       anchor.download = "";
       window.document.body.appendChild(anchor);
       anchor.click();
