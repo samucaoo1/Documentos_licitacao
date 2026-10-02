@@ -5,6 +5,10 @@ services:
     plan: free
     buildCommand: ""
     startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: CORS_ORIGIN
+        value: https://samucaoo1.github.io
