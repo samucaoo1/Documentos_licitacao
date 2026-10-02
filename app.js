@@ -27,6 +27,96 @@ function backendUrl(path) {
   return API_BASE_URL + path;
 }
 
+let EXTENSION_AVAILABLE = false;
+let extensionRequestId = 0;
+const extensionPending = new Map();
+
+function updateEnvironmentNotice() {
+  if (!IS_GITHUB_PAGES) return;
+
+  environmentNotice.classList.remove("hidden");
+
+  if (EXTENSION_AVAILABLE) {
+    environmentNotice.innerHTML =
+      "<strong>Modo extensão:</strong> a extensão está conectada. Downloads e abertura assistida dos portais serão feitos localmente no seu navegador.";
+    return;
+  }
+
+  if (API_BASE_URL) {
+    environmentNotice.innerHTML =
+      "<strong>GitHub Pages + backend:</strong> interface conectada ao servidor de emissão automática.";
+    return;
+  }
+
+  environmentNotice.innerHTML =
+    "<strong>Modo GitHub Pages:</strong> instale a extensão do projeto para habilitar downloads sem servidor.";
+}
+
+function extensionRequest(type, payload = {}, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const requestId = "req-" + Date.now() + "-" + ++extensionRequestId;
+
+    const timer = setTimeout(() => {
+      extensionPending.delete(requestId);
+      reject(new Error("A extensão não respondeu."));
+    }, timeoutMs);
+
+    extensionPending.set(requestId, {
+      resolve: (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      }
+    });
+
+    window.postMessage(
+      {
+        source: "documentos-licitacao-site",
+        type,
+        requestId,
+        ...payload
+      },
+      window.location.origin
+    );
+  });
+}
+
+window.addEventListener("message", (event) => {
+  if (event.source !== window || event.origin !== window.location.origin) {
+    return;
+  }
+
+  const message = event.data;
+
+  if (!message || message.source !== "documentos-licitacao-extension") {
+    return;
+  }
+
+  if (message.type === "READY") {
+    EXTENSION_AVAILABLE = true;
+    updateEnvironmentNotice();
+    return;
+  }
+
+  if (message.type === "RESPONSE" && message.requestId) {
+    const pending = extensionPending.get(message.requestId);
+    if (!pending) return;
+
+    extensionPending.delete(message.requestId);
+    pending.resolve(message.response);
+  }
+});
+
+setTimeout(() => {
+  extensionRequest("PING", {}, 1200)
+    .then((response) => {
+      if (response?.ok) {
+        EXTENSION_AVAILABLE = true;
+        updateEnvironmentNotice();
+      }
+    })
+    .catch(() => {});
+}, 150);
+
 const OFFICIAL = {
   cnpj:
     "https://solucoes.receita.fazenda.gov.br/servicos/cnpjreva/Cnpjreva_Solicitacao.asp",
@@ -39,13 +129,7 @@ const OFFICIAL = {
   tcu: "https://certidoes-apf.apps.tcu.gov.br/"
 };
 
-if (IS_GITHUB_PAGES) {
-  environmentNotice.classList.remove("hidden");
-
-  environmentNotice.innerHTML = API_BASE_URL
-    ? "<strong>GitHub Pages + backend:</strong> interface estática conectada ao servidor de emissão automática."
-    : "<strong>Modo GitHub Pages:</strong> esta hospedagem é estática. Configure <code>API_BASE_URL</code> em <code>config.js</code> para habilitar o backend e os downloads automáticos.";
-}
+updateEnvironmentNotice();
 
 const clean = (value) =>
   String(value || "")
@@ -244,8 +328,25 @@ function renderDocuments(data) {
         portalAction.textContent = "Abrir portal oficial";
       }
 
-      portalAction.onclick = () =>
+      portalAction.onclick = async () => {
+        if (EXTENSION_AVAILABLE) {
+          try {
+            const response = await extensionRequest(
+              "OPEN_PORTAL",
+              {
+                kind: doc.id,
+                cnpj: data.cnpj,
+                uf: data.uf
+              },
+              8000
+            );
+
+            if (response?.ok) return;
+          } catch {}
+        }
+
         window.open(doc.officialUrl, "_blank", "noopener,noreferrer");
+      };
     }
 
     if (
@@ -401,11 +502,18 @@ async function consultOnGithubPages(cnpj, uf) {
   );
 
   const tcuRequest = /^\d{14}$/.test(cnpj)
-    ? fetchJson(
-        "https://certidoes-apf.apps.tcu.gov.br/api/rest/publico/certidoes/" +
-          encodeURIComponent(cnpj) +
-          "?seEmitirPDF=false"
-      )
+    ? EXTENSION_AVAILABLE
+      ? extensionRequest("QUERY_TCU", { cnpj }, 12000).then((response) => {
+          if (!response?.ok) {
+            throw new Error(response?.error || "Falha ao consultar o TCU.");
+          }
+          return response.data;
+        })
+      : fetchJson(
+          "https://certidoes-apf.apps.tcu.gov.br/api/rest/publico/certidoes/" +
+            encodeURIComponent(cnpj) +
+            "?seEmitirPDF=false"
+        )
     : Promise.reject(
         new Error("A API pública do TCU ainda recebe CNPJ numérico.")
       );
@@ -593,6 +701,20 @@ async function downloadTcuOnBrowser(cnpj, button) {
     button.disabled = true;
     button.textContent = "Gerando PDF...";
 
+    if (EXTENSION_AVAILABLE) {
+      const response = await extensionRequest(
+        "DOWNLOAD_TCU",
+        { cnpj },
+        30000
+      );
+
+      if (!response?.ok) {
+        throw new Error(response?.error || "Falha ao baixar pelo complemento.");
+      }
+
+      return;
+    }
+
     const data = await fetchJson(
       "https://certidoes-apf.apps.tcu.gov.br/api/rest/publico/certidoes/" +
         encodeURIComponent(cnpj) +
@@ -633,7 +755,7 @@ async function downloadTcuOnBrowser(cnpj, button) {
     alert(
       "Não foi possível gerar o PDF diretamente no navegador: " +
         error.message +
-        "\n\nRode a versão com backend para evitar limitações de CORS."
+        "\n\nInstale a extensão do projeto para evitar limitações de CORS sem usar servidor."
     );
   } finally {
     button.disabled = false;
