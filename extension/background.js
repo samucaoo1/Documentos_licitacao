@@ -35,8 +35,8 @@ function makeDocuments() {
         id,
         label: item.label,
         url: item.url,
-        status: "idle",
-        message: "Aguardando",
+        status: "queued",
+        message: "Na fila",
         tabId: null,
         downloadId: null,
         filename: null,
@@ -156,10 +156,7 @@ async function startWorkflow(cnpj, uf) {
   };
 
   await setState(state);
-
-  for (const id of Object.keys(DOCUMENTS)) {
-    await openDocument(id, false);
-  }
+  await openDocument("cgu", true);
 
   return getState();
 }
@@ -236,10 +233,27 @@ async function downloadUrl(kind, url, filename) {
   return { ok: true, downloadId };
 }
 
-async function saveCurrentPageAsPdf(kind, sender) {
+async function nextQueuedDocument(completedKind) {
+  const state = await getState();
+  const ids = Object.keys(DOCUMENTS);
+  const index = ids.indexOf(completedKind);
+
+  for (let i = index + 1; i < ids.length; i++) {
+    const next = state.documents[ids[i]];
+
+    if (next && next.status === "queued") {
+      await openDocument(ids[i], true);
+      return ids[i];
+    }
+  }
+
+  return null;
+}
+
+async function saveCurrentPageAsPdf(kind, senderTabId = null) {
   const state = await getState();
   const cnpj = state.supplier?.cnpj;
-  const tabId = sender?.tab?.id;
+  const tabId = senderTabId ?? state.documents?.[kind]?.tabId ?? null;
 
   if (!cnpj || !tabId) {
     throw new Error("Não foi possível identificar a aba.");
@@ -270,17 +284,19 @@ async function saveCurrentPageAsPdf(kind, sender) {
     shrinkToFit: true
   });
 
+  const saved = result === "saved" || result === "replaced";
+
   await patchDocument(kind, {
-    status:
-      result === "saved" || result === "replaced"
-        ? "downloaded"
-        : "result_ready",
-    message:
-      result === "saved" || result === "replaced"
-        ? "PDF salvo."
-        : "Comprovante pronto; salvamento do PDF não foi concluído.",
+    status: saved ? "downloaded" : "result_ready",
+    message: saved
+      ? "PDF salvo."
+      : "Documento pronto; o salvamento do PDF não foi concluído.",
     filename: name
   });
+
+  if (saved) {
+    await nextQueuedDocument(kind);
+  }
 
   return { ok: true, result };
 }
@@ -329,7 +345,10 @@ async function handleMessage(message, sender) {
       return downloadUrl(message.kind, message.url, message.filename);
 
     case "SAVE_PAGE_PDF":
-      return saveCurrentPageAsPdf(message.kind, sender);
+      return saveCurrentPageAsPdf(message.kind, sender?.tab?.id ?? null);
+
+    case "SAVE_DOCUMENT_PDF":
+      return saveCurrentPageAsPdf(message.kind);
 
     default:
       return { ok: false, error: "Ação desconhecida." };
@@ -413,6 +432,8 @@ api.downloads.onChanged.addListener(async (delta) => {
     message: "Certidão baixada.",
     filename: item?.filename || null
   });
+
+  await nextQueuedDocument(kind);
 
   delete map[String(delta.id)];
   await api.storage.local.set({ downloadMap: map });
