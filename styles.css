@@ -5,3 +5,18 @@
 .mode.automatic{background:#eaf8f1;color:var(--ok)}.mode.captcha{background:#fff4df;color:var(--warn)}.mode.credentials{background:#eef3ff;color:var(--primary)}.mode.manual{background:#f2f4f7;color:#475467}
 .action.primaryAction{background:var(--primary);border-color:var(--primary);color:#fff}.action.primaryAction:hover{filter:brightness(.96)}
 @media(max-width:620px){.toolbarActions{width:100%}.toolbarActions button{flex:1}}
+
+.company{display:block}
+.companyMain{display:flex;justify-content:space-between;align-items:center;gap:18px}
+.cnaes{margin-top:18px;padding-top:18px;border-top:1px solid var(--border);display:grid;gap:12px}
+.cnaePrincipal{display:grid;gap:5px}
+.cnaePrincipal small{color:var(--muted);font-size:12px}
+.cnaePrincipal strong{font-size:13px;line-height:1.45}
+.secondaryCnaes summary{cursor:pointer;font-weight:800;font-size:13px}
+.cnaeList{display:grid;gap:7px;margin-top:10px}
+.cnaeItem{padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:#f8fafc;font-size:12px;line-height:1.4}
+.cardActions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
+.cardActions .action{width:100%}
+.portalAction{background:#fff}
+.downloadAction.primaryAction{background:var(--primary);color:#fff;border-color:var(--primary)}
+@media(max-width:620px){.companyMain{align-items:flex-start;flex-direction:column}}
