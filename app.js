@@ -12,6 +12,11 @@ const overall = $("#overall");
 const refresh = $("#refresh");
 const downloadAvailable = $("#downloadAvailable");
 const environmentNotice = $("#environmentNotice");
+const companyCnaes = $("#companyCnaes");
+const primaryCnae = $("#primaryCnae");
+const secondaryCnaesBox = $("#secondaryCnaesBox");
+const secondaryCnaesSummary = $("#secondaryCnaesSummary");
+const secondaryCnaes = $("#secondaryCnaes");
 
 const IS_GITHUB_PAGES = location.hostname.endsWith(".github.io");
 const API_BASE_URL = String(window.APP_CONFIG?.API_BASE_URL || "").replace(/\/$/, "");
@@ -121,8 +126,8 @@ function setDownloadState() {
   downloadAvailable.disabled = automatic.length === 0;
   downloadAvailable.textContent =
     automatic.length > 0
-      ? "Baixar automáticos (" + automatic.length + ")"
-      : "Nenhum download automático";
+      ? "Baixar certidões disponíveis (" + automatic.length + ")"
+      : "Nenhuma certidão automática disponível";
 }
 
 async function fetchJson(url, options = {}) {
@@ -169,8 +174,9 @@ function renderDocuments(data) {
   for (const doc of data.documents) {
     const node = template.content.cloneNode(true);
     const badge = node.querySelector(".badge");
-    const action = node.querySelector(".action");
     const mode = node.querySelector(".mode");
+    const downloadAction = node.querySelector(".downloadAction");
+    const portalAction = node.querySelector(".portalAction");
 
     node.querySelector(".icon").textContent =
       {
@@ -211,25 +217,44 @@ function renderDocuments(data) {
     }
 
     if (doc.clientDownload === "tcu") {
-      action.textContent = "Gerar e baixar PDF";
-      action.classList.add("primaryAction");
-      action.onclick = () => downloadTcuOnBrowser(data.cnpj, action);
+      downloadAction.classList.remove("hidden");
+      downloadAction.textContent = "Gerar e baixar certidão";
+      downloadAction.classList.add("primaryAction");
+      downloadAction.onclick = () =>
+        downloadTcuOnBrowser(data.cnpj, downloadAction);
     } else if (doc.downloadUrl) {
-      action.textContent = "Baixar PDF";
-      action.classList.add("primaryAction");
-      action.onclick = () => {
+      downloadAction.classList.remove("hidden");
+      downloadAction.textContent = "Baixar certidão";
+      downloadAction.classList.add("primaryAction");
+      downloadAction.onclick = () => {
         location.href = doc.downloadUrl.startsWith("/")
           ? backendUrl(doc.downloadUrl)
           : doc.downloadUrl;
       };
-    } else if (doc.officialUrl) {
-      action.textContent =
-        doc.mode === "captcha" ? "Resolver no portal" : "Abrir portal oficial";
-      action.onclick = () =>
+    }
+
+    if (doc.officialUrl) {
+      portalAction.classList.remove("hidden");
+
+      if (doc.id === "cnpj") {
+        portalAction.textContent = "Emitir cartão oficial";
+      } else if (doc.mode === "captcha") {
+        portalAction.textContent = "Emitir / baixar no portal";
+      } else {
+        portalAction.textContent = "Abrir portal oficial";
+      }
+
+      portalAction.onclick = () =>
         window.open(doc.officialUrl, "_blank", "noopener,noreferrer");
-    } else {
-      action.textContent = "Indisponível";
-      action.disabled = true;
+    }
+
+    if (
+      downloadAction.classList.contains("hidden") &&
+      portalAction.classList.contains("hidden")
+    ) {
+      portalAction.classList.remove("hidden");
+      portalAction.textContent = "Indisponível";
+      portalAction.disabled = true;
     }
 
     grid.appendChild(node);
@@ -238,9 +263,52 @@ function renderDocuments(data) {
   setDownloadState();
 }
 
+function renderCompanyCnaes(companyData) {
+  const main = companyData?.cnaePrincipal;
+  const secondary = Array.isArray(companyData?.cnaesSecundarios)
+    ? companyData.cnaesSecundarios
+    : [];
+
+  const hasMain = Boolean(main?.codigo || main?.descricao);
+
+  if (!hasMain && secondary.length === 0) {
+    companyCnaes.classList.add("hidden");
+    primaryCnae.textContent = "—";
+    secondaryCnaesBox.classList.add("hidden");
+    secondaryCnaes.innerHTML = "";
+    return;
+  }
+
+  companyCnaes.classList.remove("hidden");
+
+  primaryCnae.textContent = hasMain
+    ? [main.codigo, main.descricao].filter(Boolean).join(" — ")
+    : "Não informado";
+
+  secondaryCnaes.innerHTML = "";
+
+  if (secondary.length > 0) {
+    secondaryCnaesBox.classList.remove("hidden");
+    secondaryCnaesSummary.textContent =
+      "CNAEs secundários (" + secondary.length + ")";
+
+    for (const cnae of secondary) {
+      const row = window.document.createElement("div");
+      row.className = "cnaeItem";
+      row.textContent = [cnae.codigo, cnae.descricao]
+        .filter(Boolean)
+        .join(" — ");
+      secondaryCnaes.appendChild(row);
+    }
+  } else {
+    secondaryCnaesBox.classList.add("hidden");
+  }
+}
+
 function renderHeader(data) {
   company.classList.remove("hidden");
   companyName.textContent = data.company?.razaoSocial || "CNPJ consultado";
+  renderCompanyCnaes(data.company);
 
   companyMeta.textContent = [
     data.formattedCnpj,
@@ -356,7 +424,17 @@ async function consultOnGithubPages(cnpj, uf) {
         nomeFantasia: companyData.nome_fantasia || null,
         municipio: companyData.municipio || null,
         uf: companyData.uf || null,
-        situacao: companyData.descricao_situacao_cadastral || null
+        situacao: companyData.descricao_situacao_cadastral || null,
+        cnaePrincipal: {
+          codigo: String(companyData.cnae_fiscal || ""),
+          descricao: companyData.cnae_fiscal_descricao || ""
+        },
+        cnaesSecundarios: Array.isArray(companyData.cnaes_secundarios)
+          ? companyData.cnaes_secundarios.map((item) => ({
+              codigo: String(item?.codigo ?? item?.code ?? ""),
+              descricao: item?.descricao || item?.description || ""
+            }))
+          : []
       }
     : null;
 
@@ -611,7 +689,9 @@ downloadAvailable.addEventListener("click", async () => {
 
   for (const doc of automatic) {
     if (doc.clientDownload === "tcu") {
-      const cardButtons = [...document.querySelectorAll(".card .action")];
+      const cardButtons = [
+        ...document.querySelectorAll(".card .downloadAction")
+      ];
       const button =
         cardButtons.find((item) => item.textContent.includes("Gerar")) ||
         downloadAvailable;
