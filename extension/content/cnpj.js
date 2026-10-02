@@ -33,11 +33,8 @@
     if (!supplier) return;
 
     if (
-      A.bodyHas(
-        "comprovante de inscrição e de situação cadastral",
-        "número de inscrição",
-        "data de abertura"
-      )
+      A.bodyHas("número de inscrição") &&
+      A.bodyHas("data de abertura")
     ) {
       if (!saveAsked) {
         saveAsked = true;
