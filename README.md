@@ -1,102 +1,50 @@
 # Documentos de Licitação
 
-Central web para consulta e **download** de documentos de habilitação de fornecedores em licitações.
+Extensão de navegador para facilitar a emissão e o download de documentos de habilitação de licitantes.
 
 ## Objetivo
 
-Informar o CNPJ uma vez e automatizar o máximo possível da coleta documental.
+Informar o CNPJ uma única vez e deixar a extensão cuidar da navegação repetitiva nos portais oficiais.
 
-A aplicação distingue quatro tipos de integração:
-
-- **Automático** — consulta e/ou PDF obtidos sem intervenção humana.
-- **CAPTCHA** — o órgão exige confirmação humana.
-- **Credencial necessária** — existe integração oficial autenticada, mas o acesso precisa ser configurado.
-- **Não integrado** — provider ainda não implementado.
-
-O projeto não tenta contornar CAPTCHA ou outros mecanismos anti-automação.
-
-## Estado atual
-
-### Automático
-
-- consulta cadastral de CNPJ por dados públicos, incluindo CNAE principal e CNAEs secundários;
-- Consulta Consolidada de Pessoa Jurídica do TCU;
-- geração e download do PDF consolidado do TCU pelo backend;
-- botão individual de download para certidões automatizadas;
-- botão explícito de emissão/download no portal para documentos que exigem interação.
-
-### Assistido
-
-- **CAIXA / FGTS** — o fluxo público exige confirmação humana;
-- **TST / CNDT** — o fluxo público exige CAPTCHA;
-- **SEF/MG** — o fluxo público atual exige confirmação humana;
-- **RFB/PGFN** — a integração automática depende de acesso autenticado à API oficial.
-
-## Arquitetura
+Fluxo:
 
 ```text
-GitHub Pages
-  └── frontend
-       │
-       ▼
-Backend Node.js
-  ├── /api/consulta
-  ├── /api/documents/tcu.pdf
-  └── providers/
-      ├── company.js
-      ├── tcu.js
-      └── documents.js
+CNPJ + UF
+   │
+   ├── CGU
+   ├── CNDT / TST
+   ├── Comprovante CNPJ / Receita
+   └── CND Federal / RFB-PGFN
+        │
+        ├── sem CAPTCHA → extensão continua
+        └── com CAPTCHA → você resolve e a extensão retoma
 ```
 
-Os providers isolam cada fonte externa. Se um órgão alterar sua API ou portal, o ajuste fica concentrado no provider correspondente.
+Não há servidor intermediário. Os portais são acessados diretamente pelo navegador do usuário.
 
-## Executar localmente
+## Estado atual — 0.5.0
 
-Requer Node.js 20 ou superior.
+O painel local da extensão:
 
-```bash
-npm start
-```
+- abre os quatro portais oficiais;
+- mantém um checklist por certidão;
+- preenche o CNPJ quando identifica o campo;
+- identifica CAPTCHA ou confirmação humana;
+- continua a acompanhar a página depois da intervenção;
+- baixa PDFs quando encontra um endereço de arquivo;
+- acompanha downloads iniciados pelo próprio portal;
+- no Firefox, pode salvar páginas de comprovante como PDF usando a API do navegador.
 
-Abra:
+### Portais iniciais
 
-```text
-http://127.0.0.1:8080
-```
+- CGU — Certidão Negativa Correcional;
+- TST — CNDT;
+- Receita Federal — Comprovante de Inscrição e Situação Cadastral no CNPJ;
+- Receita Federal / PGFN — Certidão de Regularidade Fiscal Federal.
 
-Para desenvolvimento:
+## Instalação temporária no Firefox
 
-```bash
-npm run dev
-```
-
-Testes:
-
-```bash
-npm test
-```
-
-## Modo sem servidor: extensão do navegador
-
-Para o uso normal, o projeto agora pode funcionar como:
-
-```text
-GitHub Pages
-      │
-      ▼
-WebExtension local
-      ├── TCU → gera e baixa PDF diretamente
-      ├── FGTS → abre portal e tenta preencher CNPJ
-      ├── CNDT → abre portal e tenta preencher CNPJ
-      ├── Federal → abre portal e tenta preencher CNPJ
-      └── SEF/MG → abre portal e tenta preencher CNPJ
-```
-
-Nenhum servidor intermediário é obrigatório nesse modo.
-
-A extensão fica em `extension/`.
-
-### Firefox
+Clone ou baixe este repositório.
 
 Abra:
 
@@ -104,13 +52,15 @@ Abra:
 about:debugging#/runtime/this-firefox
 ```
 
-Clique em **Carregar extensão temporária** e escolha:
+Clique em **Carregar extensão temporária** e selecione:
 
 ```text
 extension/manifest.json
 ```
 
-### Chrome / Chromium
+Depois clique no ícone **Documentos de Licitação** e em **Abrir painel**.
+
+## Chrome / Chromium
 
 Abra:
 
@@ -118,79 +68,86 @@ Abra:
 chrome://extensions
 ```
 
-Ative **Modo do desenvolvedor**, clique em **Carregar sem compactação** e escolha a pasta:
+Ative **Modo do desenvolvedor** → **Carregar sem compactação** → escolha a pasta:
 
 ```text
 extension/
 ```
 
-Depois abra o GitHub Pages do projeto. O site detecta automaticamente a extensão e mostra **Modo extensão**.
+O manifesto usa a configuração Manifest V3 compatível com Firefox e Chromium modernos.
 
-A extensão não envia formulários automaticamente quando há CAPTCHA. Ela pode abrir o portal e preencher o CNPJ; a confirmação humana continua sendo feita pelo usuário.
+## Uso
 
-## GitHub Pages + backend
+1. Abra o painel da extensão.
+2. Informe CNPJ e UF.
+3. Clique em **Emitir documentação**.
+4. As abas dos órgãos são abertas em segundo plano.
+5. O painel informa quais documentos estão sendo processados.
+6. Quando aparecer **Precisa de você**, clique em **Resolver agora**.
+7. Resolva apenas o CAPTCHA/validação do órgão.
+8. A extensão continua acompanhando a emissão e registra o download.
 
-O GitHub Pages não executa Node.js. Por isso o frontend pode ser publicado no Pages e apontar para um backend hospedado separadamente.
-
-O arquivo `config.js` possui:
-
-```js
-window.APP_CONFIG = {
-  API_BASE_URL: ""
-};
-```
-
-Depois de publicar o backend, coloque sua URL:
-
-```js
-window.APP_CONFIG = {
-  API_BASE_URL: "https://SEU-BACKEND.onrender.com"
-};
-```
-
-Com isso, o site do GitHub Pages passa a usar:
+Downloads controlados diretamente pela extensão são organizados, quando possível, em:
 
 ```text
-GET /api/consulta
-GET /api/documents/tcu.pdf
-GET /api/health
+Downloads/
+└── Licitacoes/
+    └── <CNPJ>/
+        ├── 01-CGU-Correcional-<CNPJ>.pdf
+        ├── 02-CNDT-<CNPJ>.pdf
+        ├── 03-CNPJ-<CNPJ>.pdf
+        └── 04-CND-Federal-<CNPJ>.pdf
 ```
 
-Se `API_BASE_URL` ficar vazio, o Pages entra em modo estático e tenta apenas as consultas compatíveis diretamente pelo navegador.
+Downloads disparados internamente pelo portal podem manter o nome definido pelo próprio órgão.
 
-## Deploy no Render
+## Segurança e limites
 
-O repositório contém `render.yaml`.
+A extensão **não resolve nem contorna CAPTCHA**.
 
-No Render:
+Ela somente:
 
-1. crie um **Blueprint** apontando para este repositório;
-2. deixe o Render ler o `render.yaml`;
-3. aguarde o deploy;
-4. copie a URL pública do serviço;
-5. coloque essa URL em `config.js`;
-6. faça commit/push.
+- preenche dados repetitivos;
+- seleciona opções conhecidas;
+- percebe quando a confirmação humana é necessária;
+- retoma depois da confirmação;
+- localiza e baixa documentos quando o portal os disponibiliza.
 
-O backend já permite requisições do domínio `https://samucaoo1.github.io` por CORS.
+Nenhuma senha gov.br, certificado digital ou credencial é armazenada.
 
-## API Federal
-
-O backend reserva as variáveis:
+## Estrutura
 
 ```text
-FEDERAL_CND_API_URL
-FEDERAL_CND_TOKEN
+extension/
+├── manifest.json
+├── background.js
+├── popup.html
+├── popup.js
+├── popup.css
+├── dashboard/
+│   ├── index.html
+│   ├── app.js
+│   └── styles.css
+└── content/
+    ├── common.js
+    ├── cgu.js
+    ├── cndt.js
+    ├── cnpj.js
+    └── federal.js
 ```
 
-Elas são pontos de configuração para o futuro provider autenticado da CND federal. O contrato real deve seguir as credenciais/documentação concedidas ao integrador.
+Cada portal possui um adaptador separado para facilitar manutenção quando o órgão alterar sua página.
 
-**Nunca commite credenciais reais.**
+## Próximos adaptadores
 
-## Próximos passos
+- CRF / FGTS — CAIXA;
+- certidão estadual, começando por Minas Gerais;
+- outros documentos exigidos conforme o edital.
 
-- provider autenticado da CND federal;
-- automação assistida por navegador para FGTS, CNDT e SEF/MG, parando no CAPTCHA;
-- armazenamento temporário seguro dos PDFs;
-- geração de pacote ZIP;
-- controle de validade e vencimento;
-- novos providers estaduais.
+## Desenvolvimento
+
+Requer Node.js 20+ somente para os testes do repositório. A extensão em si não precisa de Node.js para funcionar.
+
+```bash
+npm test
+```
