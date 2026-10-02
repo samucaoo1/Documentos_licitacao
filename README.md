@@ -1,6 +1,6 @@
 # Documentos de Licitação
 
-Central web para consulta e download de documentos de habilitação de fornecedores em licitações.
+Central web para consulta e **download** de documentos de habilitação de fornecedores em licitações.
 
 ## Objetivo
 
@@ -21,32 +21,32 @@ O projeto não tenta contornar CAPTCHA ou outros mecanismos anti-automação.
 
 - consulta cadastral de CNPJ por dados públicos;
 - Consulta Consolidada de Pessoa Jurídica do TCU;
-- geração e download do PDF da consulta consolidada do TCU.
+- geração e download do PDF consolidado do TCU pelo backend.
 
 ### Assistido
 
-- CAIXA / FGTS — fluxo público exige confirmação humana;
-- TST / CNDT — fluxo público exige CAPTCHA;
-- SEF/MG — fluxo público atual exige confirmação humana;
-- RFB/PGFN — integração automática depende de acesso autenticado à API oficial.
+- **CAIXA / FGTS** — o fluxo público exige confirmação humana;
+- **TST / CNDT** — o fluxo público exige CAPTCHA;
+- **SEF/MG** — o fluxo público atual exige confirmação humana;
+- **RFB/PGFN** — a integração automática depende de acesso autenticado à API oficial.
 
 ## Arquitetura
 
 ```text
-Frontend
-├── index.html
-├── styles.css
-└── app.js
-
-Backend
-├── server.js
-└── providers/
-    ├── company.js
-    ├── tcu.js
-    └── documents.js
+GitHub Pages
+  └── frontend
+       │
+       ▼
+Backend Node.js
+  ├── /api/consulta
+  ├── /api/documents/tcu.pdf
+  └── providers/
+      ├── company.js
+      ├── tcu.js
+      └── documents.js
 ```
 
-Os providers isolam cada fonte externa para que mudanças em um portal não obriguem a reescrever a aplicação inteira.
+Os providers isolam cada fonte externa. Se um órgão alterar sua API ou portal, o ajuste fica concentrado no provider correspondente.
 
 ## Executar localmente
 
@@ -74,27 +74,68 @@ Testes:
 npm test
 ```
 
-## GitHub Pages
+## GitHub Pages + backend
 
-O GitHub Pages só hospeda o frontend estático. A aplicação detecta esse modo automaticamente e tenta usar diretamente as APIs públicas compatíveis com navegador.
+O GitHub Pages não executa Node.js. Por isso o frontend pode ser publicado no Pages e apontar para um backend hospedado separadamente.
 
-Para o funcionamento completo, inclusive downloads que precisam de backend, publique o servidor Node.js em um serviço como Render ou em uma VPS.
+O arquivo `config.js` possui:
+
+```js
+window.APP_CONFIG = {
+  API_BASE_URL: ""
+};
+```
+
+Depois de publicar o backend, coloque sua URL:
+
+```js
+window.APP_CONFIG = {
+  API_BASE_URL: "https://SEU-BACKEND.onrender.com"
+};
+```
+
+Com isso, o site do GitHub Pages passa a usar:
+
+```text
+GET /api/consulta
+GET /api/documents/tcu.pdf
+GET /api/health
+```
+
+Se `API_BASE_URL` ficar vazio, o Pages entra em modo estático e tenta apenas as consultas compatíveis diretamente pelo navegador.
+
+## Deploy no Render
+
+O repositório contém `render.yaml`.
+
+No Render:
+
+1. crie um **Blueprint** apontando para este repositório;
+2. deixe o Render ler o `render.yaml`;
+3. aguarde o deploy;
+4. copie a URL pública do serviço;
+5. coloque essa URL em `config.js`;
+6. faça commit/push.
+
+O backend já permite requisições do domínio `https://samucaoo1.github.io` por CORS.
 
 ## API Federal
 
-O backend reconhece as variáveis:
+O backend reserva as variáveis:
 
 ```text
 FEDERAL_CND_API_URL
 FEDERAL_CND_TOKEN
 ```
 
-Elas são apenas pontos de configuração para a futura implementação do provider autenticado da CND federal. O contrato efetivo deve seguir as credenciais e documentação concedidas ao integrador; nenhuma credencial deve ser commitada no repositório.
+Elas são pontos de configuração para o futuro provider autenticado da CND federal. O contrato real deve seguir as credenciais/documentação concedidas ao integrador.
+
+**Nunca commite credenciais reais.**
 
 ## Próximos passos
 
 - provider autenticado da CND federal;
-- automação assistida por navegador para FGTS, CNDT e SEF/MG, parando no CAPTCHA para ação do usuário;
+- automação assistida por navegador para FGTS, CNDT e SEF/MG, parando no CAPTCHA;
 - armazenamento temporário seguro dos PDFs;
 - geração de pacote ZIP;
 - controle de validade e vencimento;
