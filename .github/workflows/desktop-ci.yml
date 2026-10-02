@@ -26,8 +26,11 @@ jobs:
       - name: Syntax check
         run: python -m compileall -q desktop/src
 
-      - name: Install test dependency
-        run: python -m pip install pytest
+      - name: Install desktop dependencies
+        run: python -m pip install -r desktop/requirements.txt pytest
+
+      - name: Verify Qt WebEngine import
+        run: python -c "from PySide6.QtWebEngineWidgets import QWebEngineView; from PySide6.QtWebEngineCore import QWebEngineProfile; print('Qt WebEngine OK')"
 
       - name: Run unit tests
         env:
