@@ -32,6 +32,17 @@
   async function scan() {
     if (!supplier) return;
 
+    const input = A.findInput([
+      'input[name="cnpj"]',
+      'input[id="cnpj"]',
+      'input[name*="cnpj" i]',
+      'input[id*="cnpj" i]'
+    ]);
+
+    if (input && !input.value) {
+      A.setInput(input, supplier.cnpj);
+    }
+
     if (
       A.bodyHas("número de inscrição") &&
       A.bodyHas("data de abertura")
