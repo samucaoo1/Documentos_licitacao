@@ -329,6 +329,54 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+
+function inferKindFromDownload(item) {
+  const text = [
+    item?.url,
+    item?.finalUrl,
+    item?.referrer,
+    item?.filename
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (text.includes("certidoes.cgu.gov.br")) return "cgu";
+  if (text.includes("cndt-certidao.tst.jus.br")) return "cndt";
+  if (text.includes("cnpjreva")) return "cnpj";
+  if (
+    text.includes("servicos.receitafederal.gov.br") ||
+    text.includes("certidao")
+  ) {
+    return "federal";
+  }
+
+  return null;
+}
+
+api.downloads.onCreated.addListener(async (item) => {
+  const kind = inferKindFromDownload(item);
+  if (!kind) return;
+
+  const state = await getState();
+  const doc = state.documents?.[kind];
+
+  if (!doc || doc.status === "downloaded") return;
+
+  const stored = await api.storage.local.get("downloadMap");
+  const map = stored.downloadMap || {};
+
+  map[String(item.id)] = kind;
+  await api.storage.local.set({ downloadMap: map });
+
+  await patchDocument(kind, {
+    status: "downloading",
+    message: "Download iniciado pelo portal oficial.",
+    downloadId: item.id,
+    filename: item.filename || null
+  });
+});
+
 api.downloads.onChanged.addListener(async (delta) => {
   if (!delta?.id || delta.state?.current !== "complete") return;
 
