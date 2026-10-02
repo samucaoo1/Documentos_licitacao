@@ -54,12 +54,26 @@
     <section id="environmentNotice" class="environment hidden"></section>
 
     <section id="company" class="panel company hidden">
-      <div>
-        <small>Fornecedor</small>
-        <h3 id="companyName">—</h3>
-        <p id="companyMeta">—</p>
+      <div class="companyMain">
+        <div>
+          <small>Fornecedor</small>
+          <h3 id="companyName">—</h3>
+          <p id="companyMeta">—</p>
+        </div>
+        <span id="overall" class="badge neutral">Aguardando</span>
       </div>
-      <span id="overall" class="badge neutral">Aguardando</span>
+
+      <div id="companyCnaes" class="cnaes hidden">
+        <div class="cnaePrincipal">
+          <small>Atividade principal (CNAE)</small>
+          <strong id="primaryCnae">—</strong>
+        </div>
+
+        <details id="secondaryCnaesBox" class="secondaryCnaes hidden">
+          <summary id="secondaryCnaesSummary">CNAEs secundários</summary>
+          <div id="secondaryCnaes" class="cnaeList"></div>
+        </details>
+      </div>
     </section>
 
     <section class="toolbar">
@@ -108,7 +122,10 @@
         <div class="detailsBody"></div>
       </details>
 
-      <button class="action">Abrir</button>
+      <div class="cardActions">
+        <button class="action downloadAction hidden">Baixar certidão</button>
+        <button class="action portalAction hidden">Emitir / baixar no portal</button>
+      </div>
     </article>
   </template>
 
