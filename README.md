@@ -76,6 +76,58 @@ Testes:
 npm test
 ```
 
+## Modo sem servidor: extensão do navegador
+
+Para o uso normal, o projeto agora pode funcionar como:
+
+```text
+GitHub Pages
+      │
+      ▼
+WebExtension local
+      ├── TCU → gera e baixa PDF diretamente
+      ├── FGTS → abre portal e tenta preencher CNPJ
+      ├── CNDT → abre portal e tenta preencher CNPJ
+      ├── Federal → abre portal e tenta preencher CNPJ
+      └── SEF/MG → abre portal e tenta preencher CNPJ
+```
+
+Nenhum servidor intermediário é obrigatório nesse modo.
+
+A extensão fica em `extension/`.
+
+### Firefox
+
+Abra:
+
+```text
+about:debugging#/runtime/this-firefox
+```
+
+Clique em **Carregar extensão temporária** e escolha:
+
+```text
+extension/manifest.json
+```
+
+### Chrome / Chromium
+
+Abra:
+
+```text
+chrome://extensions
+```
+
+Ative **Modo do desenvolvedor**, clique em **Carregar sem compactação** e escolha a pasta:
+
+```text
+extension/
+```
+
+Depois abra o GitHub Pages do projeto. O site detecta automaticamente a extensão e mostra **Modo extensão**.
+
+A extensão não envia formulários automaticamente quando há CAPTCHA. Ela pode abrir o portal e preencher o CNPJ; a confirmação humana continua sendo feita pelo usuário.
+
 ## GitHub Pages + backend
 
 O GitHub Pages não executa Node.js. Por isso o frontend pode ser publicado no Pages e apontar para um backend hospedado separadamente.
