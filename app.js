@@ -88,7 +88,7 @@ function skeleton() {
 function renderDocuments(data) {
   grid.innerHTML = "";
 
-  for (const document of data.documents) {
+  for (const doc of data.documents) {
     const node = template.content.cloneNode(true);
     const badge = node.querySelector(".badge");
     const action = node.querySelector(".action");
@@ -101,27 +101,24 @@ function renderDocuments(data) {
         federal: "U",
         estadual: "E",
         sancoes: "S"
-      }[document.id] || "D";
+      }[doc.id] || "D";
 
-    node.querySelector("h4").textContent = document.title;
-    node.querySelector(".source").textContent = document.source;
+    node.querySelector("h4").textContent = doc.title;
+    node.querySelector(".source").textContent = doc.source;
 
-    badge.textContent = document.status;
-    badge.className = "badge " + (document.tone || "neutral");
+    badge.textContent = doc.status;
+    badge.className = "badge " + (doc.tone || "neutral");
 
-    node.querySelector(".message").textContent = document.message;
+    node.querySelector(".message").textContent = doc.message;
 
-    if (Array.isArray(document.details) && document.details.length) {
+    if (Array.isArray(doc.details) && doc.details.length) {
       const details = node.querySelector(".details");
       const body = node.querySelector(".detailsBody");
 
       details.classList.remove("hidden");
 
-      for (const item of document.details) {
-        const row = document.createElement
-          ? document.createElement("div")
-          : window.document.createElement("div");
-
+      for (const item of doc.details) {
+        const row = window.document.createElement("div");
         row.className = "detail";
         row.textContent =
           (item.emissor || item.orgaoEmissor || "Órgão") +
@@ -131,15 +128,15 @@ function renderDocuments(data) {
       }
     }
 
-    if (document.downloadUrl) {
+    if (doc.downloadUrl) {
       action.textContent = "Baixar PDF oficial";
       action.onclick = () => {
-        location.href = document.downloadUrl;
+        location.href = doc.downloadUrl;
       };
-    } else if (document.officialUrl) {
+    } else if (doc.officialUrl) {
       action.textContent = "Abrir portal oficial";
       action.onclick = () =>
-        window.open(document.officialUrl, "_blank", "noopener,noreferrer");
+        window.open(doc.officialUrl, "_blank", "noopener,noreferrer");
     } else {
       action.textContent = "Indisponível";
       action.disabled = true;
