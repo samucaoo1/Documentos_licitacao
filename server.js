@@ -295,6 +295,18 @@ async function serveStatic(pathname, response) {
 
 async function handler(request, response) {
   const url = new URL(request.url, "http://localhost");
+  const allowedOrigin = process.env.CORS_ORIGIN || "*";
+
+  response.setHeader("access-control-allow-origin", allowedOrigin);
+  response.setHeader("access-control-allow-methods", "GET, OPTIONS");
+  response.setHeader("access-control-allow-headers", "Accept, Content-Type");
+  response.setHeader("vary", "Origin");
+
+  if (request.method === "OPTIONS") {
+    response.writeHead(204);
+    response.end();
+    return;
+  }
 
   try {
     if (url.pathname === "/api/health") {
