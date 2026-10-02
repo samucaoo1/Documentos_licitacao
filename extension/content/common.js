@@ -185,7 +185,7 @@ globalThis.LicitacaoAdapter = {
         return (
           /\.pdf(?:$|[?#])/i.test(href) ||
           text.includes("baixar pdf") ||
-          text.includes("certidão") && href.startsWith("http")
+          text.includes("download pdf")
         );
       }) || null
     );
