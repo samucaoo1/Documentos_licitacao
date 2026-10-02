@@ -9,11 +9,27 @@
     supplier = await A.init(kind);
     if (!supplier) return;
 
-    A.selectText(["ente privado", "entes privados"]);
-    A.selectText([
-      "certidão negativa correcional",
-      "negativa correcional"
-    ]);
+    const privateSelected =
+      A.selectText(["ente privado", "entes privados"]) ||
+      A.clickText(["ente privado", "entes privados"]);
+
+    const certificateSelected =
+      A.selectText([
+        "certidão negativa correcional",
+        "negativa correcional"
+      ]) ||
+      A.clickText([
+        "certidão negativa correcional",
+        "negativa correcional"
+      ]);
+
+    if (privateSelected || certificateSelected) {
+      await A.status(
+        kind,
+        "working",
+        "Tipo de certidão selecionado; preenchendo CNPJ."
+      );
+    }
 
     const input = A.findInput([
       'input[name*="cnpj" i]',
