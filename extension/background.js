@@ -1,158 +1,352 @@
 const api = globalThis.browser ?? globalThis.chrome;
 
-const PORTALS = {
-  cnpj:
-    "https://solucoes.receita.fazenda.gov.br/servicos/cnpjreva/Cnpjreva_Solicitacao.asp",
-  fgts:
-    "https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf",
-  cndt:
-    "https://www.tst.jus.br/certidao1",
-  federal:
-    "https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir",
-  estadual_mg:
-    "https://www.fazenda.mg.gov.br/empresas/certidao_debitos/",
-  tcu:
-    "https://certidoes-apf.apps.tcu.gov.br/"
+const DOCUMENTS = {
+  cgu: {
+    label: "CGU — Certidão Negativa Correcional",
+    url: "https://certidoes.cgu.gov.br/consulta-certidao",
+    order: "01"
+  },
+  cndt: {
+    label: "CNDT — Débitos Trabalhistas",
+    url: "https://cndt-certidao.tst.jus.br/gerarCertidao",
+    order: "02"
+  },
+  cnpj: {
+    label: "Receita — Comprovante CNPJ",
+    url: "https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/",
+    order: "03"
+  },
+  federal: {
+    label: "RFB/PGFN — Regularidade Fiscal Federal",
+    url: "https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cnpj",
+    order: "04"
+  }
 };
 
 function cleanCnpj(value = "") {
-  return String(value).toUpperCase().replace(/[^0-9A-Z]/g, "");
+  return String(value).replace(/\D/g, "").slice(0, 14);
 }
 
-async function fetchTcu(cnpj, pdf = false) {
-  const clean = cleanCnpj(cnpj);
+function makeDocuments() {
+  return Object.fromEntries(
+    Object.entries(DOCUMENTS).map(([id, item]) => [
+      id,
+      {
+        id,
+        label: item.label,
+        url: item.url,
+        status: "idle",
+        message: "Aguardando",
+        tabId: null,
+        downloadId: null,
+        filename: null,
+        updatedAt: Date.now()
+      }
+    ])
+  );
+}
 
-  if (!/^\d{14}$/.test(clean)) {
-    throw new Error("A API pública do TCU aceita CNPJ numérico neste fluxo.");
+async function getState() {
+  const stored = await api.storage.local.get("workflowState");
+  return stored.workflowState || {
+    supplier: null,
+    running: false,
+    startedAt: null,
+    documents: makeDocuments()
+  };
+}
+
+async function setState(state) {
+  await api.storage.local.set({ workflowState: state });
+  return state;
+}
+
+async function patchDocument(id, patch) {
+  const state = await getState();
+  if (!state.documents[id]) return state;
+
+  state.documents[id] = {
+    ...state.documents[id],
+    ...patch,
+    updatedAt: Date.now()
+  };
+
+  await setState(state);
+  return state;
+}
+
+async function resetWorkflow() {
+  return setState({
+    supplier: null,
+    running: false,
+    startedAt: null,
+    documents: makeDocuments()
+  });
+}
+
+async function openDocument(id, active = false) {
+  const state = await getState();
+  const doc = state.documents[id];
+
+  if (!doc) throw new Error("Documento desconhecido.");
+
+  if (doc.tabId) {
+    try {
+      const existing = await api.tabs.get(doc.tabId);
+      if (existing) {
+        if (active) await api.tabs.update(doc.tabId, { active: true });
+        return existing;
+      }
+    } catch {}
   }
 
-  const url =
-    "https://certidoes-apf.apps.tcu.gov.br/api/rest/publico/certidoes/" +
-    encodeURIComponent(clean) +
-    "?seEmitirPDF=" +
-    String(Boolean(pdf));
-
-  const response = await fetch(url, {
-    headers: {
-      accept: "application/json"
-    }
+  const tab = await api.tabs.create({
+    url: DOCUMENTS[id].url,
+    active
   });
 
-  const raw = await response.text();
-  let data;
+  await patchDocument(id, {
+    status: "opening",
+    message: "Abrindo portal oficial…",
+    tabId: tab?.id ?? null
+  });
 
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    throw new Error("O TCU retornou conteúdo não reconhecido.");
-  }
-
-  if (!response.ok) {
-    throw new Error(data?.message || "TCU: HTTP " + response.status);
-  }
-
-  return data;
+  return tab;
 }
 
-async function downloadTcu(cnpj) {
+async function startWorkflow(cnpj, uf) {
   const clean = cleanCnpj(cnpj);
 
   if (!/^\d{14}$/.test(clean)) {
-    throw new Error("A API pública do TCU aceita CNPJ numérico neste fluxo.");
+    throw new Error("Informe um CNPJ numérico com 14 dígitos.");
   }
 
-  const data = await fetchTcu(clean, true);
+  const state = {
+    supplier: {
+      cnpj: clean,
+      uf: String(uf || "").toUpperCase()
+    },
+    running: true,
+    startedAt: Date.now(),
+    documents: makeDocuments()
+  };
 
-  const base64 =
-    data?.certidaoPDF ||
-    data?.pdfBase64 ||
-    data?.pdf ||
-    data?.arquivo ||
-    null;
+  await setState(state);
 
-  if (typeof base64 !== "string" || base64.length === 0) {
-    throw new Error("O TCU não retornou o PDF.");
+  for (const id of Object.keys(DOCUMENTS)) {
+    await openDocument(id, false);
   }
 
-  const normalized = base64.replace(
-    /^data:application\/pdf;base64,/i,
-    ""
-  );
+  return getState();
+}
 
-  const dataUrl = "data:application/pdf;base64," + normalized;
+async function focusDocument(id) {
+  const state = await getState();
+  const doc = state.documents[id];
+
+  if (!doc) throw new Error("Documento desconhecido.");
+
+  if (doc.tabId) {
+    try {
+      return await api.tabs.update(doc.tabId, { active: true });
+    } catch {}
+  }
+
+  return openDocument(id, true);
+}
+
+async function portalReady(kind, sender) {
+  const state = await getState();
+  const doc = state.documents[kind];
+
+  if (!state.supplier || !doc) {
+    return { ok: false, inactive: true };
+  }
+
+  await patchDocument(kind, {
+    status: "working",
+    message: "Portal carregado; preparando consulta…",
+    tabId: sender?.tab?.id ?? doc.tabId ?? null
+  });
+
+  return {
+    ok: true,
+    supplier: state.supplier,
+    document: state.documents[kind]
+  };
+}
+
+async function downloadUrl(kind, url, filename) {
+  const state = await getState();
+  const cnpj = state.supplier?.cnpj;
+
+  if (!cnpj) throw new Error("Nenhum licitante ativo.");
+
+  const order = DOCUMENTS[kind]?.order || "99";
+  const safeName =
+    filename || order + "-" + kind.toUpperCase() + "-" + cnpj + ".pdf";
 
   const downloadId = await api.downloads.download({
-    url: dataUrl,
-    filename: "Documentos-Licitacao/06-TCU-Consulta-Consolidada-" + clean + ".pdf",
+    url,
+    filename:
+      "Licitacoes/" +
+      cnpj +
+      "/" +
+      safeName.replace(/[\\/:*?"<>|]+/g, "-"),
     saveAs: false,
     conflictAction: "uniquify"
   });
 
+  await patchDocument(kind, {
+    status: "downloading",
+    message: "Baixando certidão…",
+    downloadId,
+    filename: safeName
+  });
+
+  const stored = await api.storage.local.get("downloadMap");
+  const map = stored.downloadMap || {};
+  map[String(downloadId)] = kind;
+  await api.storage.local.set({ downloadMap: map });
+
   return { ok: true, downloadId };
 }
 
-async function openPortal(kind, cnpj, uf) {
-  const clean = cleanCnpj(cnpj);
-  const key = kind === "estadual" && uf === "MG" ? "estadual_mg" : kind;
-  const url = PORTALS[key];
+async function saveCurrentPageAsPdf(kind, sender) {
+  const state = await getState();
+  const cnpj = state.supplier?.cnpj;
+  const tabId = sender?.tab?.id;
 
-  if (!url) {
-    throw new Error("Portal ainda não configurado para este documento.");
+  if (!cnpj || !tabId) {
+    throw new Error("Não foi possível identificar a aba.");
   }
 
-  await api.storage.local.set({
-    pendingCertificate: {
-      kind,
-      cnpj: clean,
-      uf,
-      createdAt: Date.now()
-    }
+  if (typeof api.tabs.saveAsPDF !== "function") {
+    return {
+      ok: false,
+      unsupported: true,
+      error: "Seu navegador não oferece salvamento direto da página em PDF."
+    };
+  }
+
+  await api.tabs.update(tabId, { active: true });
+
+  const name =
+    DOCUMENTS[kind].order +
+    "-" +
+    kind.toUpperCase() +
+    "-" +
+    cnpj +
+    ".pdf";
+
+  const result = await api.tabs.saveAsPDF({
+    toFileName: name,
+    showBackgroundColors: true,
+    showBackgroundImages: true,
+    shrinkToFit: true
   });
 
-  const tab = await api.tabs.create({ url, active: true });
-  return { ok: true, tabId: tab?.id ?? null };
+  await patchDocument(kind, {
+    status:
+      result === "saved" || result === "replaced"
+        ? "downloaded"
+        : "result_ready",
+    message:
+      result === "saved" || result === "replaced"
+        ? "PDF salvo."
+        : "Comprovante pronto; salvamento do PDF não foi concluído.",
+    filename: name
+  });
+
+  return { ok: true, result };
 }
 
-async function handle(message) {
-  if (!message || message.source !== "documentos-licitacao-site") {
+async function handleMessage(message, sender) {
+  if (!message || typeof message.type !== "string") {
     return { ok: false, error: "Mensagem inválida." };
   }
 
-  if (message.type === "PING") {
-    return {
-      ok: true,
-      extension: true,
-      version: api.runtime.getManifest().version
-    };
-  }
+  switch (message.type) {
+    case "GET_STATE":
+      return { ok: true, state: await getState() };
 
-  if (message.type === "QUERY_TCU") {
-    return {
-      ok: true,
-      data: await fetchTcu(message.cnpj, false)
-    };
-  }
+    case "RESET":
+      return { ok: true, state: await resetWorkflow() };
 
-  if (message.type === "DOWNLOAD_TCU") {
-    return downloadTcu(message.cnpj);
-  }
+    case "START_WORKFLOW":
+      return {
+        ok: true,
+        state: await startWorkflow(message.cnpj, message.uf)
+      };
 
-  if (message.type === "OPEN_PORTAL") {
-    return openPortal(message.kind, message.cnpj, message.uf);
-  }
+    case "OPEN_DASHBOARD":
+      await api.tabs.create({
+        url: api.runtime.getURL("dashboard/index.html"),
+        active: true
+      });
+      return { ok: true };
 
-  return { ok: false, error: "Ação desconhecida." };
+    case "FOCUS_DOCUMENT":
+      await focusDocument(message.kind);
+      return { ok: true };
+
+    case "PORTAL_READY":
+      return portalReady(message.kind, sender);
+
+    case "ADAPTER_STATUS":
+      await patchDocument(message.kind, {
+        status: message.status,
+        message: message.message || "",
+        tabId: sender?.tab?.id ?? null
+      });
+      return { ok: true };
+
+    case "DOWNLOAD_URL":
+      return downloadUrl(message.kind, message.url, message.filename);
+
+    case "SAVE_PAGE_PDF":
+      return saveCurrentPageAsPdf(message.kind, sender);
+
+    default:
+      return { ok: false, error: "Ação desconhecida." };
+  }
 }
 
+api.runtime.onInstalled.addListener(() => {
+  resetWorkflow().catch(() => {});
+});
+
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  Promise.resolve(handle(message))
+  Promise.resolve(handleMessage(message, sender))
     .then(sendResponse)
     .catch((error) => {
       sendResponse({
         ok: false,
-        error: error?.message || "Erro na extensão."
+        error: error?.message || "Erro interno da extensão."
       });
     });
 
   return true;
+});
+
+api.downloads.onChanged.addListener(async (delta) => {
+  if (!delta?.id || delta.state?.current !== "complete") return;
+
+  const stored = await api.storage.local.get("downloadMap");
+  const map = stored.downloadMap || {};
+  const kind = map[String(delta.id)];
+
+  if (!kind) return;
+
+  const items = await api.downloads.search({ id: delta.id });
+  const item = items?.[0];
+
+  await patchDocument(kind, {
+    status: "downloaded",
+    message: "Certidão baixada.",
+    filename: item?.filename || null
+  });
+
+  delete map[String(delta.id)];
+  await api.storage.local.set({ downloadMap: map });
 });
